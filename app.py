@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 
+# Streamlit requires set_page_config to be called before any other Streamlit commands
+st.set_page_config(page_title="B2B Sales Pipeline Dashboard", layout="wide")
+
 # ---------- LOAD DATA ----------
 @st.cache_data
 def load_data():
@@ -8,8 +11,6 @@ def load_data():
     return df
 
 df = load_data()
-
-st.set_page_config(page_title="B2B Sales Pipeline Dashboard", layout="wide")
 
 st.title("📊 B2B Sales Pipeline Dashboard")
 st.caption("Fictitious computer hardware company – built by Amr 😎")
@@ -49,42 +50,73 @@ col2.metric("Win Rate", f"{win_rate:.0%}")
 col3.metric("Won Revenue", f"${total_won_revenue:,.0f}")
 col4.metric("Open Deals", f"{open_deals}")
 
+
+
+
 st.markdown("---")
-
+col1,col2=st.columns(2)
 # ---------- TEAM PERFORMANCE ----------
-st.subheader("👥 Team Performance (by Manager)")
+with col1:
+    st.subheader("👥 Team Performance (by Manager)")
 
-manager_stats = (
-    filtered_df
-    .groupby('manager')
-    .agg(
-        deals=('opportunity_id', 'count'),
-        win_rate=('win_flag', 'mean'),
-        revenue=('won_revenue', 'sum')
+    manager_stats = (
+        filtered_df
+        .groupby('manager')
+        .agg(
+            deals=('opportunity_id', 'count'),
+            win_rate=('win_flag', 'mean'),
+            revenue=('won_revenue', 'sum')
+        )
+        .sort_values('win_rate', ascending=False)
     )
-    .sort_values('win_rate', ascending=False)
-)
 
-st.dataframe(manager_stats)
+    st.dataframe(manager_stats)
+with col2:
+    st.subheader("👥 Team Win Rate (Bar Chart)")
 
-# ---------- PRODUCT PERFORMANCE ----------
-st.subheader("🧩 Product Performance")
+    manager_chart_data = manager_stats.reset_index()
 
-product_stats = (
-    filtered_df
-    .groupby('product')
-    .agg(
-        deals=('opportunity_id', 'count'),
-        win_rate=('win_flag', 'mean'),
-        revenue=('won_revenue', 'sum')
+    st.bar_chart(
+        data=manager_chart_data,
+        x="manager",
+        y="win_rate",
     )
-    .sort_values('win_rate', ascending=False)
-)
 
-st.dataframe(product_stats)
+        
+# ---------- PRODUCT PERFORMANCE ----------=========================
+with col1:
+    
+    sector_stats = (
+        filtered_df
+        .groupby('sector')['win_flag']
+        .mean()
+        .sort_values(ascending=False)
+    )
 
-# ---------- QUARTERLY TREND ----------
-st.subheader("📈 Quarterly Deal Volume")
+    st.subheader("🏭 Sector Win Rate")
+    st.dataframe(sector_stats)
+
+with col2:
+#       # ---------- PRODUCT PERFORMANCE ----------
+    st.subheader("🧩 Product Performance")
+
+    product_stats = (
+        filtered_df
+        .groupby('product')
+        .agg(
+            deals=('opportunity_id', 'count'),
+            win_rate=('win_flag', 'mean'),
+            revenue=('won_revenue', 'sum')
+        )
+        .sort_values('win_rate', ascending=False)
+    )
+
+    st.dataframe(product_stats)     
+ 
+col1,col2=st.columns(2)
+# with col1:
+
+
 
 quarterly = (
     filtered_df
@@ -94,8 +126,32 @@ quarterly = (
     .sort_values(['year', 'quarter'])
 )
 
+quarterly['year_quarter'] = quarterly['year'].astype(str) + " Q" + quarterly['quarter'].astype(str)
+
+st.subheader("📈 Quarterly Deal Volume")
+
 st.line_chart(
     data=quarterly,
-    x="quarter",
+    x="year_quarter",
     y="opportunity_id",
 )
+
+        
+# with col2:
+#    # ---------- QUARTERLY TREND ----------
+#     st.subheader("📈 Quarterly Deal Volume")
+
+#     quarterly = (
+#         filtered_df
+#         .groupby(['year', 'quarter'])['opportunity_id']
+#         .count()
+#         .reset_index()
+#         .sort_values(['year', 'quarter'])
+#     )
+#     st.line_chart(
+#         data=quarterly,
+#         x="quarter",
+#         y="opportunity_id",
+#     )
+    
+
